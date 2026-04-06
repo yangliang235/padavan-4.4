@@ -1,0 +1,39 @@
+name: Build Padavan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: yangliang235/padavan-4.4
+          ref: main  # 👈 这里改成 main 就好了！
+          fetch-depth: 1
+
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install -y unzip libtool-bin curl cmake gperf gawk flex bison nano xxd \
+            fakeroot kmod cpio git python3-docutils gettext automake autopoint \
+            texinfo build-essential help2man pkg-config zlib1g-dev libgmp3-dev \
+            libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget libc-dev-bin
+      
+      - name: Build Toolchain
+        run: |
+          cd toolchain-mipsel
+          chmod +x build_toolchain
+          sh build_toolchain
+          
+      - name: Build Firmware
+        run: |
+          cd trunk
+          fakeroot ./build_firmware_ci NETGEAR-BZV
+          
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: Padavan Firmware
+          path: trunk/images/
