@@ -1,0 +1,47 @@
+name: Build Padavan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: yangliang235/padavan-4.4
+          ref: main
+          fetch-depth: 1
+
+      - name: Prepare environment
+        run: |
+          sudo apt update
+          sudo apt install -y unzip libtool-bin curl cmake gperf gawk flex bison nano xxd \
+            fakeroot kmod cpio git python3-docutils gettext automake autopoint \
+            texinfo build-essential help2man pkg-config zlib1g-dev libgmp3-dev \
+            libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget libc-dev-bin
+
+      - name: Build Toolchain
+        run: |
+          cd toolchain-mipsel
+          chmod +x build_toolchain
+          sh build_toolchain
+
+      # 👇 在这里加入 CPU 超频设置（最正确的位置）
+      - name: Enable CPU Overclock
+        run: |
+          cd trunk
+          echo "CONFIG_FIRMWARE_INCLUDE_OC=y" >> .config
+          echo 'CONFIG_FIRMWARE_MT7621_OC="0x362"' >> .config
+          echo "✅ CPU超频已启用：MT7621 @ 1100MHz"
+
+      - name: Build Firmware
+        run: |
+          cd trunk
+          fakeroot ./build_firmware_ci NETGEAR-BZV
+
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: Padavan Firmware
+          path: trunk/images/
